@@ -1,4 +1,6 @@
-[YouTube Video: Rust Pogramming Builder Patterns Tutorial](https://youtu.be/Z_3WOSiYYFY)
+**YouTube Video:** [Rust Builder Pattern Tutorial](https://youtu.be/Z_3WOSiYYFY)
+
+**YouTube Video:** [Rust TypeState Builder Pattern Tutorial](https://youtu.be/1H7yjCQ8SaM)
 
 
 Rust Programming Builder Patterns.
@@ -11,7 +13,7 @@ cargo run --example builder-consuming
 cargo run --example builder-consuming
 
 # To run the consuming builder pattern
-cargo run --example builder-state
+cargo run --example builder-states
 ```
 
 Implementations: 

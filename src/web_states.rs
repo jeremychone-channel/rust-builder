@@ -1,48 +1,59 @@
-//! State builder pattern example.
-//! YouTube video coming...
-//!
 use crate::prelude::*;
+use core::marker::PhantomData;
 
 #[derive(Debug)]
 pub struct Request {
 	url: String,
-	method: String,                 // should be enum
+	method: String,                 // Should eventually be an enum
 	headers: Vec<(String, String)>, // (name, value)
 	body: Option<String>,
 }
 
-#[derive(Default, Clone)]
-pub struct RequestBuilder<U, M> {
-	url: U,    // required for .build()
-	method: M, // required for .build()
-	headers: Vec<(String, String)>,
-	body: Option<String>,
-}
-
 // region:    --- States
-#[derive(Clone)]
-pub struct Url(String);
-#[derive(Clone)]
-pub struct NoUrl;
+#[derive(Default, Clone)]
+pub struct Sealed;
+#[derive(Default, Clone)]
+pub struct NotSealed;
 
-#[derive(Clone)]
-pub struct Method(String);
-#[derive(Clone)]
+#[derive(Default, Clone)]
+pub struct NoUrl;
+#[derive(Default, Clone)]
+pub struct Url(String);
+
+#[derive(Default, Clone)]
 pub struct NoMethod;
+#[derive(Default, Clone)]
+pub struct Method(String);
 // endregion: --- States
 
-impl RequestBuilder<NoUrl, NoMethod> {
+#[derive(Default, Clone)]
+pub struct RequestBuilder<U, M, S> {
+	url: U,
+	method: M,
+	headers: Vec<(String, String)>,
+	body: Option<String>,
+	marker_seal: PhantomData<S>,
+}
+
+impl RequestBuilder<NoUrl, NoMethod, NotSealed> {
 	pub fn new() -> Self {
+		RequestBuilder::default()
+	}
+}
+
+impl<U, M> RequestBuilder<U, M, NotSealed> {
+	pub fn seal(self) -> RequestBuilder<U, M, Sealed> {
 		RequestBuilder {
-			url: NoUrl,
-			method: NoMethod,
-			headers: Vec::new(),
-			body: None,
+			url: self.url,
+			method: self.method,
+			headers: self.headers,
+			body: self.body,
+			marker_seal: PhantomData,
 		}
 	}
 }
 
-impl RequestBuilder<Url, Method> {
+impl<S> RequestBuilder<Url, Method, S> {
 	pub fn build(self) -> Result<Request> {
 		Ok(Request {
 			url: self.url.0,
@@ -53,37 +64,33 @@ impl RequestBuilder<Url, Method> {
 	}
 }
 
-/// Note: Since we implement url() only when NoUrl,
-/// it won't be available once set the url.
-impl<M> RequestBuilder<NoUrl, M> {
-	pub fn url(mut self, url: impl Into<String>) -> RequestBuilder<Url, M> {
+impl<U, M> RequestBuilder<U, M, NotSealed> {
+	pub fn url(
+		self,
+		url: impl Into<String>,
+	) -> RequestBuilder<Url, M, NotSealed> {
 		RequestBuilder {
 			url: Url(url.into()),
 			method: self.method,
 			headers: self.headers,
 			body: self.body,
+			marker_seal: PhantomData,
 		}
 	}
-}
 
-/// Note: For Method, we want to allow to reset again, so, we keep
-///       the M open as type of the struct, which could be monomorphized in both types.
-impl<U, M> RequestBuilder<U, M> {
 	pub fn method(
-		mut self,
+		self,
 		method: impl Into<String>,
-	) -> RequestBuilder<U, Method> {
+	) -> RequestBuilder<U, Method, NotSealed> {
 		RequestBuilder {
 			url: self.url,
 			method: Method(method.into()),
 			headers: self.headers,
 			body: self.body,
+			marker_seal: PhantomData,
 		}
 	}
-}
 
-/// Note: `body(...)` and `header(...)` will be allowed for all builder "states."
-impl<U, M> RequestBuilder<U, M> {
 	pub fn body(mut self, body: impl Into<String>) -> Self {
 		self.body.insert(body.into());
 		self
